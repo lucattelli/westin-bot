@@ -8,8 +8,10 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "numpy>=2.3.0",
     "openai>=1.84.0",
     "pymupdf>=1.26.0",
+    "sqlite-vec>=0.1.6",
 ]
 
 [dependency-groups]
@@ -19,6 +21,7 @@ dev = [
     "mypy>=1.16.0",
     "pylint>=3.3.7",
     "pytest>=8.4.0",
+    "sqlite-utils>=3.38",
 ]
 
 [project.scripts]
