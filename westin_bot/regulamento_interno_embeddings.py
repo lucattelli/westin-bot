@@ -1,5 +1,5 @@
 import sqlite3
-from uuid import uuid4
+from datetime import datetime
 
 import numpy as np
 import pymupdf
@@ -36,8 +36,10 @@ def get_regulamento_interno_embeddings():
             chapter["end_index"] = document_text.index(chapters[idx + 1]["name"])
         ch_text = document_text[chapter["start_index"] : chapter["end_index"]]
         chapter["chunks"] = ch_text.split("\nArt.")
+
         for idx, chunk in enumerate(chapter["chunks"]):
-            chapter["chunks"][idx] = f"{chapter['chunks'][0]}\n\nArt. {chunk}"
+            if idx > 0:
+                chapter["chunks"][idx] = f"{chapter['chunks'][0]}\n\nArt. {chunk}"
         del chapter["chunks"][0]
 
     conn = sqlite3.connect("db/embeddings.db")
@@ -46,16 +48,18 @@ def get_regulamento_interno_embeddings():
 
     conn.execute(
         """
-    CREATE TABLE docs (
-        id VARCHAR(40) PRIMARY KEY,
-        doc_name VARCHAR(1000),
-        chunk_text TEXT,
-        embedding VECTOR
-    )
+        CREATE VIRTUAL TABLE vec_chunks USING vec0(
+            document_id INTEGER PARTITION KEY,
+            embedding FLOAT[1536],
+            doc_name TEXT,
+            chunk_text TEXT
+        );
     """
     )
 
     conn.commit()
+
+    doc_name = "Regulamento Interno"
 
     client = OpenAI()
     for chapter in chapters:
@@ -67,9 +71,15 @@ def get_regulamento_interno_embeddings():
             )
             embedding = response.data[0].embedding
             embedding_array = np.array(embedding, dtype=np.float32).tobytes()
+            row_id = int(datetime.now().timestamp())
             conn.execute(
-                "INSERT INTO docs (id, doc_name, chunk_text, embedding) VALUES (?, ?, ?, ?)",
-                (str(uuid4()), "Regulamento Interno", chunk, embedding_array),
+                "INSERT INTO vec_chunks (document_id, embedding, doc_name, chunk_text) VALUES (?, ?, ?, ?)",
+                (
+                    hash(doc_name),
+                    embedding_array,
+                    doc_name,
+                    chunk,
+                ),
             )
             conn.commit()
 
