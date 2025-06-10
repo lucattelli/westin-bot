@@ -17,9 +17,10 @@ def ask_question(question: str):
 
     cursor = conn.execute(
         f"""
-        SELECT document_id, embedding, doc_name, chunk_text
+        SELECT document_id, embedding, doc_name, chunk_text, distance
         FROM vec_chunks
         WHERE embedding match ?
+        ORDER BY distance
         LIMIT ?
     """,
         (query_embedding, 5),
